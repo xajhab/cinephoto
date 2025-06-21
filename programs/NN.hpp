@@ -4,6 +4,7 @@
 #include "functions/GEMM.hpp" // for Conv2d
 #include "functions/prob_div.hpp" //for AvgPool2d
 #include "headers/simple_nn.h" // templated inference engine
+// #include "../nn/PIGEON/headers/simple_nn.h"
 #include "architectures/CNNs.hpp" // includes common CNN architectures
 #include "architectures/ResNet.hpp" // includes ResNet architectures
 #include "architectures/DeepReduce.hpp" // includes DeepReduce architectures
