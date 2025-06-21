@@ -59,6 +59,9 @@ git clone https://github.com/chart21/hpmpc.git
 cd hpmpc
 git submodule update --init --recursive
 ```
+
+There is a re-develop and modified version: https://github.com/xajhab/hpmpc-cinephoto.git
+
 #### 3.2 Docker Environment
 Pull the pre-built Docker image containing all required dependencies:
 ```bash
