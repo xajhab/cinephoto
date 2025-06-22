@@ -119,19 +119,17 @@ void inference(DATATYPE* res)
     // VGG16 PyTorch, ImageNet
     int n_test = NUM_INPUTS * BASE_DIV, ch = 3, h = 224, w = 224, num_classes = 1000;
     auto model = VGG16_PyTorch<modeltype>(num_classes);
-#elif FUNCTION_IDENTIFIER == 90
-#include "programs/train_vgg.hpp"
 #endif
 
     // === Read Labels and Images ===
 
     Config cfg;
-    cfg.mode ="test";// Training is not supported yet
-    cfg.save_dir="nn/Pygeon/models/pretrained";
-    cfg.data_dir="nn/Pygeon/data/datasets";
-    cfg.pretrained ="vgg16 cifar standard.bin";
-    cfg.image_file="CIFAR-10 custom test images.bin";
-    cfg.label_file="CIFAR-10 custom test labels.bin";
+    cfg.mode = "test";  // Training is not supported yet
+    cfg.save_dir = "nn/Pygeon/models";
+    cfg.data_dir = "nn/Pygeon/data";
+    cfg.pretrained = "dummy";
+    cfg.image_file = "all_zero";
+    cfg.label_file = "all_zero";
 
 #if MODELOWNER != -1 || DATAOWNER != -1  // If actual data is used, load paths from environment variables
     cfg.save_dir = std::getenv("MODEL_DIR") != NULL ? std::getenv("MODEL_DIR") : cfg.save_dir;

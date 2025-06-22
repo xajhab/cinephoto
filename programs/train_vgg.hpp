@@ -12,6 +12,7 @@
 #if TRUNC_APPROACH > 1
 #include "functions/exact_truncation.hpp"
 #endif
+#include "functions/fit.hpp"
 #define FUNCTION inference
 #define RESULTTYPE DATATYPE
 using namespace std;
@@ -33,7 +34,7 @@ void inference(DATATYPE* res)
     using modeltype = sint;
 #endif
 
-    // === Specify Model Archiecture and Data Dimensions ===
+    // === Specify Model Architecture and Data Dimensions ===
 
 #if FUNCTION_IDENTIFIER == 70 || FUNCTION_IDENTIFIER == 170 || FUNCTION_IDENTIFIER == 270 || FUNCTION_IDENTIFIER == 370
     // ResNet18, CIFAR-10
@@ -120,18 +121,133 @@ void inference(DATATYPE* res)
     int n_test = NUM_INPUTS * BASE_DIV, ch = 3, h = 224, w = 224, num_classes = 1000;
     auto model = VGG16_PyTorch<modeltype>(num_classes);
 #elif FUNCTION_IDENTIFIER == 90
-#include "programs/train_vgg.hpp"
+{
+    // === VGG Training Mode ===
+    print_online("=== Start VGG Training Mode ===");
+    
+    // Training parameters (consistent with VGG inference)
+    int n_train = NUM_INPUTS * BASE_DIV, ch = 3, h = 32, w = 32, num_classes = 10;
+    auto model = VGG<modeltype>(num_classes);
+
+    // === Load training data (mirroring inference structure) ===
+    Config cfg;
+    cfg.mode = "train";  // Set to training mode
+    cfg.save_dir = "nn/Pygeon/models/pretrained";  // Same as inference
+    cfg.data_dir = "nn/Pygeon/data/datasets";    // Same as inference
+    cfg.pretrained = "vgg16_cifar_standard.bin";           // Use dummy pretrained for training
+    cfg.image_file = "CIFAR-10_custom_test_images.bin";        // Same as inference
+    cfg.label_file = "CIFAR-10_custom_test_labels.bin";        // Same as inference
+
+#if MODELOWNER != -1 || DATAOWNER != -1  // If using real data, load paths from environment variables
+    cfg.save_dir = std::getenv("MODEL_DIR") != NULL ? std::getenv("MODEL_DIR") : cfg.save_dir;
+    cfg.data_dir = std::getenv("DATA_DIR") != NULL ? std::getenv("DATA_DIR") : cfg.data_dir;
+    cfg.pretrained = std::getenv("MODEL_FILE") != NULL ? std::getenv("MODEL_FILE") : cfg.pretrained;
+    cfg.image_file = std::getenv("SAMPLES_FILE") != NULL ? std::getenv("SAMPLES_FILE") : cfg.image_file;
+    cfg.label_file = std::getenv("LABELS_FILE") != NULL ? std::getenv("LABELS_FILE") : cfg.label_file;
+
+    // Print training configuration
+    print_init("=== Training Mode Configuration ===");
+    print_init("Mode: " + cfg.mode);
+    print_init("Save Directory: " + cfg.save_dir);
+    print_init("Data Directory: " + cfg.data_dir);
+    print_init("Pretrained Model: " + cfg.pretrained);
+    print_init("Image File: " + cfg.image_file);
+    print_init("Label File: " + cfg.label_file);
 #endif
+
+    cfg.batch = NUM_INPUTS * (BASE_DIV);
+
+    // === Load training data (mirroring inference data loading logic) ===
+#if DATAOWNER == -1
+    print_online("No Dataowner specified. Loading dummy training data...");
+    auto train_Y = read_dummy_labels(n_train);
+    auto train_X = read_dummy_images(n_train, ch, h, w);
+#else
+#if PSELF == DATAOWNER
+    print_online("Reading training dataset from file...");
+    string path = cfg.data_dir + "/" + cfg.image_file;
+    auto train_X = read_custom_images(path, n_train, ch, h, w);
+    print_online("Training dataset imported.");
+#else
+    auto train_X = read_dummy_images(n_train, ch, h, w);
+#endif
+    string lpath = cfg.data_dir + "/" + cfg.label_file;
+    auto train_Y = read_custom_labels(lpath, n_train);
+#endif
+
+    // === Data loading and conversion ===
+    MatX<modeltype> train_XX = train_X.unaryExpr([](LFLOATTYPE val) {
+        modeltype tmp;
+        tmp.template prepare_receive_and_replicate<DATAOWNER>(
+            FloatFixedConverter<FLOATTYPE, INT_TYPE, UINT_TYPE, FRACTIONAL>::float_to_ufixed(val));
+        return tmp;
+    });
+
+    // Start communication to ensure data sharing
+    modeltype::communicate();
+    for (int i = 0; i < train_XX.size(); i++) {
+        train_XX(i).template complete_receive_from<DATAOWNER>();
+    }
+    print_online("Received Secret Share of Training Dataset");
+
+    // === Create training data loader ===
+    DataLoader<modeltype> train_loader;
+    train_loader.load(train_XX, train_Y, cfg.batch, ch, h, w, false);  // No shuffle for training
+
+    // === Create optimizer and loss function ===
+    auto optimizer = new SGD(0.01, 0.0); // Learning rate and decay can be customized
+    class DummyLoss : public Loss<modeltype> {
+    public:
+        DummyLoss() : Loss<modeltype>() {}
+        modeltype calc_loss(const MatX<modeltype>&, const VecXi&, MatX<modeltype>&) override {
+            return modeltype(0);
+        }
+    };
+    auto loss_fn = new DummyLoss();
+
+    // === Compile training model ===
+    print_online("Compiling training model...");
+    model.compile({cfg.batch / (BASE_DIV), ch, h, w}, optimizer, loss_fn);
+
+    // === Load model parameters (same as inference) ===
+    print_online("Loading model Parameters for training...");
+#if PSELF == MODELOWNER
+    print_online("Loading model parameters from file...");
+#endif
+#if MODELOWNER != -1
+    model.template load<MODELOWNER>(cfg.save_dir, cfg.pretrained);
+#else
+    print_online("No Modelowner specified. Loading dummy parameters...");
+#endif
+    print_online("Received Secret Share of Model Parameters for training.");
+
+    // === Training ===
+    print_online("=== Start VGG Model Training ===");
+    DataLoader<modeltype> valid_loader;
+    model.fit(train_loader, 5, valid_loader);
+    
+    print_online("=== VGG Model Training Finished ===");
+    print_online("Saving model...");
+    model.save(cfg.save_dir, "vgg16_cifar_trained_party" + std::to_string(PSELF) + ".bin");
+    print_online("Model save call finished");
+    print_online("Training complete, waiting for all parties to synchronize...");
+}
+
+
+
+#else
+{
+    // ==inference ===
 
     // === Read Labels and Images ===
 
     Config cfg;
-    cfg.mode ="test";// Training is not supported yet
-    cfg.save_dir="nn/Pygeon/models/pretrained";
-    cfg.data_dir="nn/Pygeon/data/datasets";
-    cfg.pretrained ="vgg16 cifar standard.bin";
-    cfg.image_file="CIFAR-10 custom test images.bin";
-    cfg.label_file="CIFAR-10 custom test labels.bin";
+    cfg.mode = "test";  // Training is not supported yet
+    cfg.save_dir = "nn/Pygeon/models/pretrained";
+    cfg.data_dir = "nn/Pygeon/data";
+    cfg.pretrained = "vgg16_cifar_trained_party2.bin";
+    cfg.image_file = "all_zero";
+    cfg.label_file = "all_zero";
 
 #if MODELOWNER != -1 || DATAOWNER != -1  // If actual data is used, load paths from environment variables
     cfg.save_dir = std::getenv("MODEL_DIR") != NULL ? std::getenv("MODEL_DIR") : cfg.save_dir;
@@ -210,4 +326,6 @@ void inference(DATATYPE* res)
     // === Inference ===
 
     model.evaluate(test_loader);
+}
+#endif
 }

@@ -38,8 +38,6 @@
 #include "programs/tutorials/matrix_operations_tutorial.hpp"
 #elif FUNCTION_IDENTIFIER == 65
 #include "programs/tutorials/YourFirstProgram.hpp"
-#elif FUNCTION_IDENTIFIER == 90
-#include "programs/train_vgg.hpp" 
 #elif FUNCTION_IDENTIFIER < 400
 #include "programs/NN.hpp"
 #elif FUNCTION_IDENTIFIER >= 500 && FUNCTION_IDENTIFIER <= 534
