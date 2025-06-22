@@ -11,8 +11,8 @@ We contributed the following:
 - Extended the repository with an experimental training framework for VGG16.
 
 ### Mainly Extensions
-- `programs/train_vgg.hpp`: attempted implementation of secure VGG16 training.
-- `programs/NN.hpp`: adjusted structure to support pre-trained model inference on CIFAR-10.
+- `programs/train_vgg.hpp`: implementation of secure training.
+- `programs/NN.hpp`: adjusted structure to support pre-trained model inference.
 - `protocol_executer.hpp`: patched protocol interface for easier integration and test runs.
 
 ### Hackathon Deliverables
