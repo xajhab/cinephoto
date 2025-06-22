@@ -1,4 +1,4 @@
-#### Introducction
+### Introduction
 This repository is a fork of the official HPMPC repository https://github.com/chart21/hpmpc
 
 This fork was used for the TUM Science Hackathon 2025. Our group (Cinephoto club) built a complete proof-of-concept system for privacy-preserving inference using VGG16 and CIFAR-10, based on the existing HPMPC framework.
@@ -10,17 +10,18 @@ We contributed the following:
 - Collected per-layer performance/communication metrics.
 - Extended the repository with an experimental training framework for VGG16.
 
-#### Mainly Extensions
+### Mainly Extensions
 - `programs/train_vgg.hpp`: attempted implementation of secure VGG16 training.
 - `programs/NN.hpp`: adjusted structure to support pre-trained model inference on CIFAR-10.
 - `protocol_executer.hpp`: patched protocol interface for easier integration and test runs.
 
-#### Hackathon Deliverables
+### Hackathon Deliverables
 - [Report (PDF)](https://drive.google.com/file/d/1ypYsaAOFljOuKgV8YZWXqkfTKA9nyAhm/view?usp=sharing)
 - [Slides (PDF)](https://drive.google.com/file/d/1QR3a6ebzdsBcqJ9tR1BmYMf-1XKNkRva/view?usp=sharing)
 
 
 Origional README is below:
+
 ---
 
 # HPMPC: High-Performance Implementation of Secure Multiparty Computation (MPC) Protocols
